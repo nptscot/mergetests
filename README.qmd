@@ -3,7 +3,44 @@ format: gfm
 ---
 
 
-```{python}
-1 + 1
+```{r}
+remotes::install_github("nptscot/osmactive")
+library(tidyverse)
+library(sf)
+dublin_zones = zonebuilder::zb_zone("Dublin")
+osm = osmactive::get_travel_network("Republic of Ireland", boundary = dublin_zones, boundary_type = "clipsrc")
+osm |>
+  sample_n(1000) |>
+  mapview::mapview()
 ```
+
+```{r}
+bachelors_walk = osm |>
+  filter(name == "Bachelors Walk") 
+nrow(bachelors_walk)
+mapview::mapview(bachelors_walk)
+bachelors_walk_buffer = bachelors_walk |>
+  sf::st_buffer(20)
+osm_minimal = osm[bachelors_walk_buffer, , op = sf::st_intersects]
+mapview::mapview(osm_minimal)
+```
+
+We'll create some dummy data in a subset of the data:
+
+```{r}
+net_x = bachelors_walk |>
+  filter(highway != "cycleway") |>
+  select(osm_id, name)
+plot(net_x)
+net_y = osm_minimal |>
+  transmute(
+    osm_id = osm_id,
+    value = round(runif(nrow(osm_minimal), 0, 100))
+  )
+plot(net_y)
+sf::write_sf(net_x, "net_x.geojson", delete_dsn = TRUE)
+sf::write_sf(net_y, "net_y.geojson", delete_dsn = TRUE)
+```
+
+
 
